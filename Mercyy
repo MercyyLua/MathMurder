@@ -1,123 +1,162 @@
---// Load Rayfield
-local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "Mercyy Hub - Math Murder",
-    LoadingTitle = "Mercyy Hub",
-    LoadingSubtitle = "by Mercyy",
-    ConfigurationSaving = {
-        Enabled = false,
-    },
-    Discord = {
-        Enabled = false,
-    },
-    KeySystem = false,
+   Name = "MercyyHub",
+   Icon = 0, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
+   LoadingTitle = "I own u",
+   LoadingSubtitle = "by Mercyy",
+   Theme = "Default", -- Check https://docs.sirius.menu/rayfield/configuration/themes
+
+   ToggleUIKeybind = "K", -- The keybind to toggle the UI visibility (string like "K" or Enum.KeyCode)
+
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false, -- Prevents Rayfield from warning when the script has a version mismatch with the interface
+
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = nil, -- Create a custom folder for your hub/game
+      FileName = "Big Hub"
+   },
+
+   Discord = {
+      Enabled = false, -- Prompt the user to join your Discord server if their executor supports it
+      Invite = "noinvitelink", -- The Discord invite code, do not include discord.gg/. E.g. discord.gg/ ABCD would be ABCD
+      RememberJoins = true -- Set this to false to make them join the discord every time they load it up
+   },
+
+   KeySystem = false, -- Set this to true to use our key system
+   KeySettings = {
+      Title = "Untitled",
+      Subtitle = "Key System",
+      Note = "No method of obtaining the key is provided", -- Use this to tell the user how to get a key
+      FileName = "Key", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
+      SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
+      GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
+      Key = {"Hello"} -- List of keys that will be accepted by the system, can be RAW file links (pastebin, github etc) or simple strings ("hello","key22")
+   }
 })
 
--- Main Tab
-local MainTab = Window:CreateTab("Main", 4483362458)
+local Tab = Window:CreateTab("Main", 4483362458) -- Title, Image
 
--- Toggle state
-getgenv().AutoAnswerEnabled = false
+local Button = Tab:CreateButton({
+   Name = "Show Answer",
+   Callback = function()
+   local qT = workspace.Map.Functional.Screen.SurfaceGui.MainFrame.MainGameContainer.MainTxtContainer.QuestionText  
 
--- Setup Function
-local function SetupAutoAnswer()
-    if getgenv().MercyyConnections then
-        for _, v in ipairs(getgenv().MercyyConnections) do
-            v:Disconnect()
-        end
-    end
+qT:GetPropertyChangedSignal("Text"):Connect(function()
+    local e = qT.Text:gsub("=", "")
+    e = e:gsub("x", "*")
+    
+    local s, r = pcall(function() return loadstring("return " .. e)() end)
+    task.wait()
+    
+    if s and type(r) == "number" then 
+        qT.Text = e:gsub("%*", "x") .. "= " .. r
+    end 
+end)
+   end,
+})
 
-    getgenv().MercyyConnections = {}
+local Button = Tab:CreateButton({
+   Name = "Auto Answer",
+   Callback = function()
+local Screen = workspace.Map.Functional.Screen
+local QuestionText = Screen.SurfaceGui.MainFrame.MainGameContainer.MainTxtContainer.QuestionText
+local TypingText = Screen.SurfaceGui.MainFrame.MainGameContainer.MainTxtContainer.TypingText
+local Fill = Screen.SurfaceGui.MainFrame.MainGameContainer.TimerbarContainer.Fill
 
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local Players = game:GetService("Players")
-    local Player = Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextChatService = game:GetService("TextChatService")
+local Players = game:GetService("Players")
 
-    local Screen = workspace.Map.Functional.Screen
-    local QuestionText = Screen.SurfaceGui.MainFrame.MainGameContainer.MainTxtContainer.QuestionText
-    local TypingText = Screen.SurfaceGui.MainFrame.MainGameContainer.MainTxtContainer.TypingText
-    local Fill = Screen.SurfaceGui.MainFrame.MainGameContainer.TimerbarContainer.Fill
+local CurrentSpeller = ReplicatedStorage.GameValues.CurrentSpeller
+local ClickSound = ReplicatedStorage.Assets.SFX.Click
+local GameEvent = ReplicatedStorage.Events.GameEvent
+local Player = Players.LocalPlayer
 
-    local ClickSound = ReplicatedStorage.Assets.SFX.Click
-    local GameEvent = ReplicatedStorage.Events.GameEvent
-    local CurrentSpeller = ReplicatedStorage.GameValues.CurrentSpeller
-
-    local function SetTyping(text)
-        ClickSound:Play()
-        TypingText.Text = text
-        GameEvent:FireServer("updateAnswer", text)
-    end
-
-    -- Auto Answer Logic
-    local conn1 = QuestionText:GetPropertyChangedSignal("Text"):Connect(function()
-        if not getgenv().AutoAnswerEnabled then return end
-
-        local Character = Player.Character or Player.CharacterAdded:Wait()
-        local question = string.split(QuestionText.Text, "=")[1]
-        local result = tostring(loadstring("return " .. string.gsub(question, "x", "*"))())
-
-        Fill:SetAttribute("Answer", result)
-        Fill:SetAttribute("UhunAnswer", math.random(3, 6) / 10)
-
-        if CurrentSpeller.Value ~= Player then return end
-        task.wait(math.random(3, 8) / 10)
-        if tonumber(result) >= 15 then
-            task.wait(math.random(5, 10) / 10)
-        end
-
-        while TypingText.Text ~= result do
-            if #TypingText.Text >= #result then
-                local length = string.sub(TypingText.Text, 1, #result) ~= result and 1 or #result
-                while #TypingText.Text >= length do
-                    SetTyping(string.sub(TypingText.Text, 1, #TypingText.Text - 1))
-                    task.wait(0.05)
-                end
-            end
-
-            local typingSpeed = math.random(2, 6) / 10
-            if math.random(1, 4) == 4 and #TypingText.Text > 0 and Fill.Size.X.Scale >= 0.3 then
-                SetTyping(TypingText.Text .. tostring(math.random(0, 9)))
-                task.wait(math.random(2, 5) / 10)
-                SetTyping(string.sub(TypingText.Text, 1, #TypingText.Text - 1))
-                task.wait(math.random(1, 3) / 10)
-            end
-
-            SetTyping(string.sub(result, 1, #TypingText.Text + 1))
-            local speedMultiplier = math.clamp(Fill.Size.X.Scale, 0.25, 1)
-            task.wait(typingSpeed * speedMultiplier)
-
-            if math.random(1, 5) == 5 and Fill.Size.X.Scale >= 0.25 then
-                task.wait(math.random(3, 7) / 10)
-            end
-        end
-
-        GameEvent:FireServer("submitAnswer", result)
-    end)
-
-    -- Show Correct Answer
-    local conn2 = QuestionText:GetPropertyChangedSignal("Text"):Connect(function()
-        local e = QuestionText.Text:gsub("=", ""):gsub("x", "*")
-        local success, result = pcall(function() return loadstring("return " .. e)() end)
-        task.wait()
-        if success and type(result) == "number" then
-            QuestionText.Text = e:gsub("%*", "x") .. "= " .. result
-        end
-    end)
-
-    table.insert(getgenv().MercyyConnections, conn1)
-    table.insert(getgenv().MercyyConnections, conn2)
+local function SetTyping(text)
+  ClickSound:Play()
+  TypingText.Text = text
+  GameEvent:FireServer("updateAnswer", text)
 end
 
--- Toggle in UI
-MainTab:CreateToggle({
-    Name = "Auto Answer",
-    CurrentValue = false,
-    Flag = "AutoAnswer",
-    Callback = function(Value)
-        getgenv().AutoAnswerEnabled = Value
-        if Value then
-            SetupAutoAnswer()
-        end
-    end,
+if script_connections then
+  for _, Connection in ipairs(script_connections) do
+    Connection:Disconnect()
+  end
+  
+  table.clear(script_connections)
+end
+
+local Connections = {}
+getgenv().script_connections = Connections
+
+table.insert(Connections, Fill:GetPropertyChangedSignal("Size"):Connect(function()
+  if Fill:GetAttribute("Answer") then
+    if Fill.Size.X.Scale <= Fill:GetAttribute("UhunAnswer") and not Fill:GetAttribute("TweenEnabled") then
+      Fill:SetAttribute("TweenEnabled", true)
+      
+      if TextChatService.ChatVersion == Enum.ChatVersion.LegacyChatService then
+        -- ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(Fill:GetAttribute("Answer"), "All")
+      else
+        -- TextChatService.TextChannels.RBXGeneral:SendAsync(Fill:GetAttribute("Answer"))
+      end
+    elseif Fill.Size.X.Scale >= Fill:GetAttribute("UhunAnswer") then
+      Fill:SetAttribute("TweenEnabled", nil)
+    end
+  end
+end))
+
+table.insert(Connections, QuestionText:GetPropertyChangedSignal("Text"):Connect(function()
+  local Character = Player.Character or Player.CharacterAdded:Wait()
+  
+  local question = string.split(QuestionText.Text, "=")[1]
+  local result = tostring(loadstring("return " .. string.gsub(question, "x", "*"))())
+  
+  Fill:SetAttribute("Answer", math.random(1, 2) == 1 and result)
+  Fill:SetAttribute("UhunAnswer", math.random(3, 6) / 10)
+  
+  if CurrentSpeller.Value ~= Player then
+    return nil
+  end
+  
+  task.wait(math.random(3, 8) / 10)
+  
+  if tonumber(result) >= 15 then
+    task.wait(math.random(5, 10) / 10)
+  end
+  
+  while TypingText.Text ~= result do
+    if #TypingText.Text >= #result then
+      local length = string.sub(TypingText.Text, 1, #result) ~= result and 1 or #result
+      
+      while #TypingText.Text >= length do
+        SetTyping(string.sub(TypingText.Text, 1, #TypingText.Text - 1))
+        task.wait(0.05)
+      end
+    end
+    
+    local typingSpeed = math.random(2, 6) / 10
+    
+    if math.random(1, 4) == 4 and #TypingText.Text > 0 and Fill.Size.X.Scale >= 0.3 then
+      SetTyping(TypingText.Text .. tostring(math.random(0, 9)))
+      task.wait(math.random(2, 5) / 10)
+      
+      SetTyping(string.sub(TypingText.Text, 1, #TypingText.Text - 1))
+      task.wait(math.random(1, 3) / 10)
+    end
+    
+    SetTyping(string.sub(result, 1, #TypingText.Text + 1))
+    
+    local speedMultiplier = math.clamp(Fill.Size.X.Scale, 0.25, 1)
+    task.wait(typingSpeed * speedMultiplier)
+    
+    if math.random(1, 5) == 5 and Fill.Size.X.Scale >= 0.25 then
+      task.wait(math.random(3, 7) / 10)
+    end
+  end
+  
+  GameEvent:FireServer("submitAnswer", result)
+end))
+   end,
 })
