@@ -1,54 +1,38 @@
---// Mercyy Hub: Auto Answer UI
-local UIS = game:GetService("UserInputService")
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Player = Players.LocalPlayer
-local PlayerGui = Player:WaitForChild("PlayerGui")
+--// Load Rayfield
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 
--- Remove previous instances
-pcall(function() game.CoreGui.MercyyHub:Destroy() end)
+local Window = Rayfield:CreateWindow({
+    Name = "Mercyy Hub - Math Murder",
+    LoadingTitle = "Mercyy Hub",
+    LoadingSubtitle = "by Mercyy",
+    ConfigurationSaving = {
+        Enabled = false,
+    },
+    Discord = {
+        Enabled = false,
+    },
+    KeySystem = false,
+})
 
--- UI Setup
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-ScreenGui.Name = "MercyyHub"
-ScreenGui.ResetOnSpawn = false
+-- Main Tab
+local MainTab = Window:CreateTab("Main", 4483362458)
 
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 300, 0, 200)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
+-- Toggle state
+getgenv().AutoAnswerEnabled = false
 
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-Title.Text = "Mercyy Hub | Main Tab"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 20
-
-local ToggleButton = Instance.new("TextButton", MainFrame)
-ToggleButton.Size = UDim2.new(0, 260, 0, 40)
-ToggleButton.Position = UDim2.new(0, 20, 0, 60)
-ToggleButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleButton.Font = Enum.Font.Gotham
-ToggleButton.TextSize = 18
-ToggleButton.Text = "Auto Answer: OFF"
-
--- Variables
-local AutoAnswerEnabled = false
-local Connections = {}
-
--- Auto Answer Function
+-- Setup Function
 local function SetupAutoAnswer()
-    -- Disconnect old connections
-    for _, conn in pairs(Connections) do
-        conn:Disconnect()
+    if getgenv().MercyyConnections then
+        for _, v in ipairs(getgenv().MercyyConnections) do
+            v:Disconnect()
+        end
     end
-    table.clear(Connections)
+
+    getgenv().MercyyConnections = {}
+
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local Players = game:GetService("Players")
+    local Player = Players.LocalPlayer
 
     local Screen = workspace.Map.Functional.Screen
     local QuestionText = Screen.SurfaceGui.MainFrame.MainGameContainer.MainTxtContainer.QuestionText
@@ -65,18 +49,19 @@ local function SetupAutoAnswer()
         GameEvent:FireServer("updateAnswer", text)
     end
 
+    -- Auto Answer Logic
     local conn1 = QuestionText:GetPropertyChangedSignal("Text"):Connect(function()
-        if not AutoAnswerEnabled then return end
+        if not getgenv().AutoAnswerEnabled then return end
+
         local Character = Player.Character or Player.CharacterAdded:Wait()
         local question = string.split(QuestionText.Text, "=")[1]
         local result = tostring(loadstring("return " .. string.gsub(question, "x", "*"))())
 
-        Fill:SetAttribute("Answer", math.random(1, 2) == 1 and result)
+        Fill:SetAttribute("Answer", result)
         Fill:SetAttribute("UhunAnswer", math.random(3, 6) / 10)
 
         if CurrentSpeller.Value ~= Player then return end
         task.wait(math.random(3, 8) / 10)
-
         if tonumber(result) >= 15 then
             task.wait(math.random(5, 10) / 10)
         end
@@ -110,25 +95,29 @@ local function SetupAutoAnswer()
         GameEvent:FireServer("submitAnswer", result)
     end)
 
-    -- Show Correct Answer on screen
+    -- Show Correct Answer
     local conn2 = QuestionText:GetPropertyChangedSignal("Text"):Connect(function()
         local e = QuestionText.Text:gsub("=", ""):gsub("x", "*")
-        local success, result = pcall(function()
-            return loadstring("return " .. e)()
-        end)
+        local success, result = pcall(function() return loadstring("return " .. e)() end)
         task.wait()
         if success and type(result) == "number" then
             QuestionText.Text = e:gsub("%*", "x") .. "= " .. result
         end
     end)
 
-    table.insert(Connections, conn1)
-    table.insert(Connections, conn2)
+    table.insert(getgenv().MercyyConnections, conn1)
+    table.insert(getgenv().MercyyConnections, conn2)
 end
 
--- Toggle Auto Answer
-ToggleButton.MouseButton1Click:Connect(function()
-    AutoAnswerEnabled = not AutoAnswerEnabled
-    ToggleButton.Text = AutoAnswerEnabled and "Auto Answer: ON" or "Auto Answer: OFF"
-    SetupAutoAnswer()
-end)
+-- Toggle in UI
+MainTab:CreateToggle({
+    Name = "Auto Answer",
+    CurrentValue = false,
+    Flag = "AutoAnswer",
+    Callback = function(Value)
+        getgenv().AutoAnswerEnabled = Value
+        if Value then
+            SetupAutoAnswer()
+        end
+    end,
+})
